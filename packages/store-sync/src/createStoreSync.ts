@@ -26,6 +26,7 @@ import {
   shareReplay,
   combineLatest,
   scan,
+  retry,
   mergeMap,
 } from "rxjs";
 import { debug as parentDebug } from "./debug";
@@ -185,6 +186,10 @@ export async function createStoreSync<config extends StoreConfig = StoreConfig>(
     tap((blockNumber) => {
       debug("on block number", blockNumber, "for", followBlockTag, "block tag");
     }),
+    retry({
+      count: undefined, // ie unlimited
+      delay: 3000, // poll the RPC every 3 seconds
+    }),
     shareReplay(1),
   );
 
@@ -282,8 +287,9 @@ export async function createStoreSync<config extends StoreConfig = StoreConfig>(
           if (lastBlock.blockNumber >= blockNumber) {
             return { status, blockNumber, transactionHash };
           }
-        } catch (error) {
-          if (error instanceof TransactionReceiptNotFoundError) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } catch (error: any) {
+          if (error instanceof TransactionReceiptNotFoundError || error.name === "TransactionReceiptNotFoundError") {
             return;
           }
           throw error;
