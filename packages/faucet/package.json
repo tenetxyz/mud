@@ -1,6 +1,6 @@
 {
   "name": "@latticexyz/faucet",
-  "version": "2.0.8",
+  "version": "2.0.9",
   "description": "Faucet API for Lattice testnet",
   "repository": {
     "type": "git",
@@ -8,7 +8,6 @@
     "directory": "packages/faucet"
   },
   "license": "MIT",
-  "type": "module",
   "exports": {
     ".": "./dist/src/index.js"
   },

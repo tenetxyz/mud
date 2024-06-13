@@ -3,6 +3,7 @@ import { debug as parentDebug } from "./debug";
 import { getNonceManagerId } from "./getNonceManagerId";
 import { getTransactionCount } from "viem/actions";
 import PQueue from "p-queue";
+import { getAction } from "viem/utils";
 
 const debug = parentDebug.extend("createNonceManager");
 
@@ -65,16 +66,20 @@ export function createNonceManager({
   }
 
   async function resetNonce(): Promise<void> {
-    const nonce = await getTransactionCount(client, { address, blockTag });
+    const nonce = await getAction(client, getTransactionCount, "getTransactionCount")({ address, blockTag });
+
     nonceRef.current = nonce;
     channel?.postMessage(JSON.stringify(nonceRef.current));
     debug("reset nonce to", nonceRef.current);
   }
 
-  function shouldResetNonce(error: unknown): boolean {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  function shouldResetNonce(error: any): boolean {
     return (
-      error instanceof BaseError &&
-      error.walk((e) => e instanceof NonceTooLowError || e instanceof NonceTooHighError) != null
+      (error instanceof BaseError &&
+        error.walk((e) => e instanceof NonceTooLowError || e instanceof NonceTooHighError) != null) ||
+      error.name === "NonceTooLowError" ||
+      error.name === "NonceTooHighError"
     );
   }
 

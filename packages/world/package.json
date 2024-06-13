@@ -1,6 +1,6 @@
 {
   "name": "@latticexyz/world",
-  "version": "2.0.8",
+  "version": "2.0.9",
   "description": "World framework",
   "repository": {
     "type": "git",
@@ -8,7 +8,6 @@
     "directory": "packages/world"
   },
   "license": "MIT",
-  "type": "module",
   "exports": {
     ".": "./dist/index.js",
     "./internal": "./dist/internal.js",
@@ -54,7 +53,7 @@
     "test:ci": "pnpm run test"
   },
   "dependencies": {
-    "@arktype/util": "0.0.29",
+    "@arktype/util": "0.0.27",
     "@latticexyz/common": "workspace:*",
     "@latticexyz/config": "workspace:*",
     "@latticexyz/protocol-parser": "workspace:*",
@@ -73,7 +72,7 @@
     "@types/mocha": "^9.1.1",
     "@types/node": "^18.15.11",
     "ds-test": "https://github.com/dapphub/ds-test.git#e282159d5170298eb2455a6c05280ab5a73a4ef0",
-    "ejs": "^3.1.8",
+    "ejs": "^3.1.10",
     "forge-std": "https://github.com/foundry-rs/forge-std.git#74cfb77e308dd188d2f58864aaf44963ae6b88b1",
     "glob": "^8.0.3",
     "solhint": "^3.3.7",

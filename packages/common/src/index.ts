@@ -2,8 +2,9 @@ export * from "./common";
 export * from "./createBenchmark";
 export * from "./createBurnerAccount";
 export * from "./createNonceManager";
-export * from "./getContract";
 export * from "./getBurnerPrivateKey";
+export * from "./getContract";
+export * from "./getFeeRef";
 export * from "./getNonceManager";
 export * from "./getNonceManagerId";
 export * from "./hexToResource";
@@ -16,6 +17,8 @@ export * from "./sendTransaction";
 export * from "./spliceHex";
 export * from "./transportObserver";
 export * from "./writeContract";
+export * from "./getFeeRef";
+export * from "./createFeeRef";
 
 /** @deprecated use `getContract` instead */
 export { createContract } from "./deprecated/createContract";

@@ -56,14 +56,37 @@ export function callFrom<TChain extends Chain, TAccount extends Account>(
   return (client) => ({
     // Applies to: `client.writeContract`, `getContract(client, ...).write`
     writeContract: async (writeArgs): Promise<WriteContractReturnType> => {
+      console.log("writeArgs", writeArgs);
+
       // Skip if the contract isn't the World or the function called should not be redirected through `callFrom`.
       if (
         writeArgs.address !== params.worldAddress ||
         writeArgs.functionName === "call" ||
         writeArgs.functionName === "callFrom" ||
+        writeArgs.functionName === "batchCallFrom" ||
         writeArgs.functionName === "callWithSignature"
       ) {
         return getAction(client, writeContract, "writeContract")(writeArgs);
+      }
+
+      if (writeArgs.functionName === "batchCall") {
+        if (!writeArgs.args || !Array.isArray(writeArgs.args) || writeArgs.args.length === 0) {
+          throw new Error("batchCall args should be an array with at least one element");
+        }
+
+        const systemCallFromData = writeArgs.args[0].map((systemCallData: Hex[]) => {
+          return [params.delegatorAddress, ...systemCallData];
+        });
+
+        // Construct args for `batchCallFrom`.
+        const batchCallFromArgs: typeof writeArgs = {
+          ...writeArgs,
+          functionName: "batchCallFrom",
+          args: [systemCallFromData],
+        };
+
+        // Call `writeContract` with the new args.
+        return getAction(client, writeContract, "writeContract")(batchCallFromArgs);
       }
 
       // Encode the World's calldata (which includes the World's function selector).

@@ -26,6 +26,7 @@ import {
   shareReplay,
   combineLatest,
   scan,
+  retry,
   mergeMap,
 } from "rxjs";
 import { debug as parentDebug } from "./debug";
@@ -96,7 +97,15 @@ export async function createStoreSync<config extends StoreConfig = StoreConfig>(
       filters,
       initialState,
       initialBlockLogs,
-      indexerUrl,
+      indexerUrl:
+        indexerUrl !== false
+          ? indexerUrl ??
+            (publicClient.chain &&
+            "indexerUrl" in publicClient.chain &&
+            typeof publicClient.chain.indexerUrl === "string"
+              ? publicClient.chain.indexerUrl
+              : undefined)
+          : undefined,
     });
 
     onProgress?.({
@@ -179,18 +188,25 @@ export async function createStoreSync<config extends StoreConfig = StoreConfig>(
     tap((startBlock) => debug("starting sync from block", startBlock)),
   );
 
+  let startBlock: bigint | null = null;
+  let endBlock: bigint | null = null;
+  let lastBlockNumberProcessed: bigint | null = null;
+
   const latestBlock$ = createBlockStream({ publicClient, blockTag: followBlockTag }).pipe(shareReplay(1));
   const latestBlockNumber$ = latestBlock$.pipe(
     map((block) => block.number),
     tap((blockNumber) => {
       debug("on block number", blockNumber, "for", followBlockTag, "block tag");
     }),
+    retry({
+      count: undefined, // ie unlimited
+      delay: 3000, // poll the RPC every 3 seconds
+    }),
+    filter((blockNumber) => {
+      return lastBlockNumberProcessed == null || blockNumber > lastBlockNumberProcessed;
+    }),
     shareReplay(1),
   );
-
-  let startBlock: bigint | null = null;
-  let endBlock: bigint | null = null;
-  let lastBlockNumberProcessed: bigint | null = null;
 
   const storedBlock$ = combineLatest([startBlock$, latestBlockNumber$]).pipe(
     map(([startBlock, endBlock]) => ({ startBlock, endBlock })),
@@ -199,15 +215,20 @@ export async function createStoreSync<config extends StoreConfig = StoreConfig>(
       endBlock = range.endBlock;
     }),
     concatMap((range) => {
+      const fromBlock = lastBlockNumberProcessed
+        ? bigIntMax(range.startBlock, lastBlockNumberProcessed + 1n)
+        : range.startBlock;
+      const toBlock = range.endBlock;
+      if (toBlock < fromBlock) {
+        throw new Error(`toBlock ${toBlock} is less than fromBlock ${fromBlock}`);
+      }
       const storedBlocks = fetchAndStoreLogs({
         publicClient,
         address,
         events: storeEventsAbi,
         maxBlockRange,
-        fromBlock: lastBlockNumberProcessed
-          ? bigIntMax(range.startBlock, lastBlockNumberProcessed + 1n)
-          : range.startBlock,
-        toBlock: range.endBlock,
+        fromBlock: fromBlock,
+        toBlock: toBlock,
         storageAdapter,
         logFilter,
       });
@@ -282,8 +303,9 @@ export async function createStoreSync<config extends StoreConfig = StoreConfig>(
           if (lastBlock.blockNumber >= blockNumber) {
             return { status, blockNumber, transactionHash };
           }
-        } catch (error) {
-          if (error instanceof TransactionReceiptNotFoundError) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } catch (error: any) {
+          if (error instanceof TransactionReceiptNotFoundError || error.name === "TransactionReceiptNotFoundError") {
             return;
           }
           throw error;

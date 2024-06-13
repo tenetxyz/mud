@@ -69,7 +69,7 @@ export async function writeContract<
   } satisfies Omit<WriteContractParameters, "address" | "abi" | "account" | "functionName">;
 
   const nonceManager = await getNonceManager({
-    client: opts.publicClient ?? client,
+    client: client,
     address: account.address,
     blockTag: "pending",
     queueConcurrency: opts.queueConcurrency,
@@ -116,6 +116,11 @@ export async function writeContract<
       to: address,
     } as never);
 
+    // add 20% buffer to the gas estimate
+    if (preparedTransaction.gas) {
+      preparedTransaction.gas = (preparedTransaction.gas * 120n) / 100n;
+    }
+
     return preparedTransaction as never;
   }
 
@@ -136,7 +141,7 @@ export async function writeContract<
 
           const fullRequest = { ...preparedRequest, nonce, ...feeRef.fees };
           debug("calling", fullRequest.functionName, "with nonce", nonce, "at", fullRequest.address);
-          return await viem_writeContract(client, fullRequest as never);
+          return await getAction(client, viem_writeContract, "writeContract")(fullRequest as never);
         },
         {
           retries: 3,
